@@ -3,41 +3,51 @@ package com.project.backendPlug.service;
 import com.project.backendPlug.entity.UserEntity;
 import com.project.backendPlug.model.UserModel;
 import com.project.backendPlug.repository.UserRepository;
+
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Service;
-
-//import java.util.Optional;
 
 @Service
 public class UserService {
 
     @Autowired
     private UserRepository userRepository;
-
+    
     @Autowired
     private ModelMapper modelMapper;
 
-    // Convert Entity to Model
-    private UserModel convertToModel(UserEntity userEntity) {
-        return modelMapper.map(userEntity, UserModel.class);
+    // Convert Model 2 Entity
+    private UserEntity convertToEntity(UserModel userModel) {
+        return modelMapper.map(userModel, UserEntity.class);
     }
 
-    // Get a User by ID
     public UserModel getUserByEmail(String email) {
-        UserEntity userEntity = userRepository.findByEmail(email);
-        if (userEntity==null) {
-            return null;
-        }
-        return convertToModel(userEntity);
+        UserEntity user = userRepository.findByEmail(email);
+        if (user == null) return null;
+        return new UserModel(user.getEmail(), user.getRole());
     }
 
-    // Create or Update User
-    public UserModel createUser(UserEntity userEntity) {
-    	
-        UserEntity savedUserEntity = userRepository.save(userEntity);
-        return convertToModel(savedUserEntity);
+    public void createUser(UserModel userModel) {
+        String hashedPassword = BCrypt.hashpw(userModel.getPasswordHash(), BCrypt.gensalt());
+        UserEntity userEntity=convertToEntity(userModel);
+        userEntity.setPasswordHash(hashedPassword);
+        userEntity.setRole("FREE");
+        userEntity.setIsVerified(true);
+        userEntity.setTokensLeftToday(1);
+        userEntity.setCreatedAt(java.time.LocalDateTime.now());
+        userEntity.setUpdatedAt(java.time.LocalDateTime.now());
+        userRepository.save(userEntity);
     }
 
-    // Other methods like updating user, deleting user, etc.
+    public boolean authenticate(String email, String plainPassword) {
+        UserEntity user = userRepository.findByEmail(email);
+        if (user == null) return false;
+        return BCrypt.checkpw(plainPassword, user.getPasswordHash());
+    }
+
+    public UserEntity getEntityByEmail(String email) {
+        return userRepository.findByEmail(email);
+    }
 }

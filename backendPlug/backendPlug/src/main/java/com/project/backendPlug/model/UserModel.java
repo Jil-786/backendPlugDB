@@ -18,6 +18,10 @@ public class UserModel {
 
 	    private LocalDateTime updatedAt;
 
+		public UserModel(String email2, String role2) {
+			// TODO Auto-generated constructor stub
+		}
+
 		public String getEmail() {
 			return email;
 		}
